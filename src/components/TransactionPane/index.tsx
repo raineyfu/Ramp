@@ -8,14 +8,16 @@ export const TransactionPane: TransactionPaneComponent = ({ transaction }) => {
   const [approved, setApproved] = useState(transaction.approved)
 
   const setTransactionApproval = useCallback(
-    (newValue: boolean) => {
+    (newValue: boolean) => {  
       fakeFetch<SuccessResponse>("setTransactionApproval", {
         transactionId: transaction.id,
       })
+
       setApproved(newValue)
     },
     [transaction.id]
   )
+  
 
   return (
     <div className="RampPane">

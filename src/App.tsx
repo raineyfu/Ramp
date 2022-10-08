@@ -13,20 +13,32 @@ export function App() {
   const { data: paginatedTransactions, ...paginatedTransactionsUtils } = usePaginatedTransactions()
   const { data: transactionsByEmployee, ...transactionsByEmployeeUtils } = useTransactionsByEmployee()
   const [isLoading, setIsLoading] = useState(false)
-
+  const [loaded, setLoaded] = useState([] as any);
   const transactions = useMemo(
     () => paginatedTransactions?.data ?? transactionsByEmployee ?? null,
     [paginatedTransactions, transactionsByEmployee]
   )
-
+  
+  // save old transactions when new transaction is loaded
+  useEffect(() => {
+    if (transactions != null) {
+      if (loaded != null && loaded.length > 0) {
+        setLoaded(loaded.concat(transactions));
+      } else {
+        setLoaded(transactions);
+      }
+    }
+  }, [transactions]);
+  
   const loadAllTransactions = useCallback(async () => {
-    setIsLoading(true)
+    if (employees === null) {
+      setIsLoading(true)
+    }
     transactionsByEmployeeUtils.invalidateData()
 
     await employeeUtils.fetchAll()
-    await paginatedTransactionsUtils.fetchAll()
-
     setIsLoading(false)
+    await paginatedTransactionsUtils.fetchAll()
   }, [employeeUtils, paginatedTransactionsUtils, transactionsByEmployeeUtils])
 
   const loadTransactionsByEmployee = useCallback(
@@ -64,8 +76,12 @@ export function App() {
             if (newValue === null) {
               return
             }
-
-            await loadTransactionsByEmployee(newValue.id)
+            setLoaded([]);
+            if (newValue.id == '') {
+              loadAllTransactions();
+            } else {
+              await loadTransactionsByEmployee(newValue.id)
+            }
           }}
         />
 
@@ -77,10 +93,16 @@ export function App() {
           ) : (
             <Fragment>
               <div data-testid="transaction-container">
-                {transactions.map((transaction) => (
+                {loaded != null && loaded.length > 0 ? 
+                loaded!.map((transaction: any) => (
                   <TransactionPane key={transaction.id} transaction={transaction} />
-                ))}
+                )) : 
+                transactions!.map((transaction) => (
+                  <TransactionPane key={transaction.id} transaction={transaction} />
+                ))
+                }
               </div>
+              {paginatedTransactions !== null && paginatedTransactions.nextPage != null && transactionsByEmployee === null ?
               <button
                 className="RampButton"
                 disabled={paginatedTransactionsUtils.loading}
@@ -89,7 +111,8 @@ export function App() {
                 }}
               >
                 View More
-              </button>
+              </button> : null
+              }
             </Fragment>
           )}
         </div>
